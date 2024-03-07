@@ -49,15 +49,22 @@ library(treeio) # "tree input/output"
 # It exports the data as an "extended newick"
 # First create a table with tips and node reference numbers
 rec_table <- list(node = seq_len(n_tips + n_nodes))
-# This is a very dumb ancestral reconstruction, just for the example : all ancestral nodes are at the same location
-dumb_ancestral <- c(mean(lat), mean(long))
+# # This is a very dumb ancestral reconstruction, just for the example : all ancestral nodes are at the same location
+# dumb_ancestral <- c(mean(lat), mean(long))
+# # Allocate locations to the data table (first tips, then nodes)
+# rec_table[["location1"]] <- c(dat$lat, rep(dumb_ancestral[1], n_nodes))
+# rec_table[["location2"]] <- c(dat$long, rep(dumb_ancestral[2], n_nodes))
+
+# Estimateur MB (Mardia)
+MB_ancestral <- mut
 # Allocate locations to the data table (first tips, then nodes)
-rec_table[["location1"]] <- c(dat$lat, rep(dumb_ancestral[1], n_nodes))
-rec_table[["location2"]] <- c(dat$long, rep(dumb_ancestral[2], n_nodes))
+rec_table[["location1"]] <- c(dat$lat, rep(MB_ancestral[1], n_nodes))
+rec_table[["location2"]] <- c(dat$long, rep(MB_ancestral[2], n_nodes))
+
 # Format the data to export it
 rec_table <- as_tibble(rec_table)
 tree_tibble <- as_tibble(tree)
 tree_data <- full_join(tree_tibble, rec_table, by = 'node')
 tree_data <- as.treedata(tree_data)
 # Write the extended newick. The resulting file can be read by Evolaps.
-write.beast(tree_data, file = here("results", "tree_with_data.tree"), tree.name = "TREE1")
+write.beast(tree_data, file = here("results", "tree_with_data_MB.tree"), tree.name = "TREE_MB")
