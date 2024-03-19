@@ -63,7 +63,7 @@
 # R <- 1/103*t(Y-Un%*%mut)%*%invC%*%(Y-Un%*%mut)
 
 
-# Construction de C, avec les fonctions de ape...
+# Construction de C, basée sur les feuilles (temps d'évolution commune)
 
 C <- matrix(nrow=104, ncol=104)
 for (i in 1:104) {
@@ -87,7 +87,7 @@ Y <- as.matrix(dat[,2:3])
 mut <- solve(t(Un)%*%invC%*%Un)%*%t(Un)%*%invC%*%Y
 R <- 1/103*t(Y-Un%*%mut)%*%invC%*%(Y-Un%*%mut)
 
-# Matrice C de tous les noeuds
+# Construction de Cnoeud, basée sur tous les noeuds
 
 f <- function(x) {
   if (x<105) return(x)
@@ -116,3 +116,6 @@ mX <- matrix(Um%*%mut, ncol=1, byrow=F)
 SigmaXY <- rbind(cbind(RC[105:206,1:104],RC[105:206,207:310]),cbind(RC[311:412,1:104],RC[311:412,207:310]))
 SigmaY <- rbind(cbind(RC[1:104,1:104],RC[1:104,207:310]),cbind(RC[207:310,1:104],RC[207:310,207:310]))
 Estimateur <- mX + SigmaXY%*%solve(SigmaY)%*%(vecY-mY)
+
+
+
