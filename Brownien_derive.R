@@ -28,7 +28,7 @@ X <- cbind(Un,T)
 Y <- as.matrix(dat[,2:3])
 
 theta <- solve(t(X)%*%invC%*%X)%*%t(X)%*%invC%*%Y
-R_d <- 1/103*t(Y)%*%invC%*%(Y-X%*%theta)
+R_d <- 1/102*t(Y)%*%invC%*%(Y-X%*%theta)
 
 # Construction de Cnoeud, basée sur tous les noeuds
 
