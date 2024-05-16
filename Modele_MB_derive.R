@@ -107,7 +107,8 @@ Estimateur_d <- mZ_d + kronecker(diag(2),(Cmn%*%solve(C)), FUN = "*")%*%(vecY-mY
 
 ################################################################################
 # Calcul de l'AIC ?
-
-L_hat_d <- -103 * log(2*pi) - 103/2 * log(det(R_d)) - 1/2*sum(diag(solve(R_d)%*%t(Y-X%*%theta)%*%(Y-X%*%theta)))
+L_hat_d <- -104*log(2*pi)-104/2*log(det(R_d))-log(det(C)) -1/2* sum(diag(solve(R_d)%*%t(Y-X%*%theta)%*%solve(C)%*%(Y-X%*%theta)))
 AIC_d <- -2*L_hat_d + 2*8
-# 2933
+BIC_d <- -2*L_hat_d + log(104)*8
+AIC_d
+BIC_d
