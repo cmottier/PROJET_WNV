@@ -54,7 +54,7 @@ abline(v=fit$LogLik, lty=2, lwd=5, col="red")
 ##### TEST #####
 
 ## matrice de covariance R
-Sigma <- matrix(c(1,-1,-1,2),nrow = 2)
+  Sigma <- matrix(c(1,-1,-1,2),nrow = 2)
 Sigma
 
 ## simulation d'un brownien (équivalent à dat pour nous)
