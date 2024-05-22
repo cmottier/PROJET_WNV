@@ -5,7 +5,7 @@ library(mvMORPH)
 ## paramètres du brownien simulé
 
 # variance
-sigma <- matrix(c(1,-1,-1,2),nrow = 2)
+sigma <- matrix(R,nrow = 2)
 
 # moyenne (ancetre)
 mu = c(1,1)
@@ -34,13 +34,16 @@ for(i in 1:10000){
   mu_est <- solve(t(Un)%*%invC%*%Un)%*%t(Un)%*%invC%*%y #estimateur de mu (ancêtre)
   mu1[i] <- mu_est[1]
   mu2[i] <- mu_est[2]
-  err_mu1[i] <- (mu[1] - mu_est[1])^2 # erreur sur la première composante
-  err_mu2[i] <- (mu[2] - mu_est[2])^2 # erreur sur la deuxième composante
-  err[i]<- sum((mu - mu_est)^2) # 'erreur globale"
-  err_norm[i] <- (sum((mu-mu_est)^2)) / sum(mu^2)
+  err_mu1[i] <- (mu[1] - mu_est[1]) # écart sur la première composante
+  err_mu2[i] <- (mu[2] - mu_est[2]) # écart sur la deuxième composante
+  err[i]<- sqrt(sum((mu - mu_est)^2)) # 'erreur globale"
+  err_norm[i] <- sqrt((sum((mu-mu_est)^2))) / sqrt(sum(mu^2)) #erreur normalisée en norme 2
   
 }
+summary(mu1)
+summary(mu2)
 
+boxplot(err_norm)
 
 # erreur globale
 err_moy <- mean(err)
@@ -68,6 +71,9 @@ boxplot(err_norm)
 
 boxplot(err_mu1)
 boxplot(err_mu2)
+
+summary(err_mu1)
+summary(err_mu2)
 
 # boxplot des estimations
 boxplot(mu1)
@@ -103,6 +109,7 @@ boxplot(err_mu2d)
 boxplot(mu1d)
 boxplot(mu2d)
 
+summary(mu1d)
 
 ### deuxième idée : simuler un brownien, fitter suivant un modèle brownien, avec et sans dérive. Compter le nombre
 ### de fois où l'AIC donne le 'bon' modèle
@@ -258,20 +265,27 @@ c(mean(mu1_hat),mean(mu2_hat))
 
 ## idée: faire un graphique de la valeur estimée en fonction du nombre de feuilles
 mu_hat <- list()
+mu_garb <- matrix(0,nrow = 1000,ncol = 2)
 mu1_hat <- NULL
 mu2_hat <- NULL
 err1 <- NULL
 err2 <- NULL
 for(i in 10:500){
+  # simuler l'arbre et le brownien
   tree_sim <- rtree(n=i,equiprob = FALSE) #on augmente le nb de feuilles de l'arbre à chaque itération
-  sim_bm <- mvSIM(tree = tree_sim, nsim = 1, model = "BM1", param = list(sigma = sigma, theta = mu))
+  sim_bm <- mvSIM(tree = tree_sim, nsim = 1000, model = "BM1", param = list(sigma = sigma, theta = mu))
   ## paramètres d'estimation
   n<-length(tree_sim$tip.label)
   C <- vcv(tree_sim)
   invC<-solve(C)
   Un<-matrix(rep(1,i),ncol = 1)
+  # calculer 1000 estimations
+  for(j in 1:1000){
+    mu_garb[j,] <- solve(t(Un)%*%invC%*%Un)%*%t(Un)%*%invC%*%sim_bm[[j]]
+  }
   
-  mu_hat[[i]] <- solve(t(Un)%*%invC%*%Un)%*%t(Un)%*%invC%*%sim_bm
+  # estimation moyenne pour un arbre à i feuilles
+  mu_hat[[i]] <- c(mean(mu_garb[,1]),mean(mu_garb[,2]))
   
   mu1_hat[i] <- mu_hat[[i]][1]
   err1[i] <- mu[1] - mu1_hat[i]
@@ -280,12 +294,13 @@ for(i in 10:500){
   err2[i] <- mu[2] - mu2_hat[i]
   
 }
+library(dplyr)
 par(mfrow=c(1,2))
 plot(x = 10:500, y = cummean(mu1_hat[10:500]), type = 'l')
 plot(x = 10:500, y = cummean(mu2_hat[10:500]), type = 'l')
 
-plot(mu1_hat[10:500],type = "l")
-plot(mu2_hat[10:500],type = "l")
+plot(x = 10:500, y = mu1_hat[10:500],type = "l")
+plot(x = 10:500, y = mu2_hat[10:500],type = "l")
 
 plot(err1[10:500], type = 'l')
 plot(err2[10:500], type = 'l')
@@ -293,6 +308,138 @@ plot(err2[10:500], type = 'l')
 boxplot(err1)
 boxplot(err2)
 
+boxplot(mu1_hat[10:500])
+boxplot(mu2_hat[20:500])
+
+
+#################################################
+## boxplots sur des arbres de tailles différentes
+#################################################
+
+### arbre à 10 feuilles
+tree10 <- rtree(n=10,equiprob = FALSE)
+MB10 <- mvSIM(tree = tree10, nsim = 10000, model = "BM1", param = list(sigma = sigma, theta = mu))
+C10 <- vcv(tree10)
+U10 <- matrix(rep(1,10),ncol = 1)
+invC10 <- solve(C10)
+mu10 <- list()
+mu1_10 <- NULL
+mu2_10 <- NULL
+for(i in 1:10000){
+  mu10[[i]] <- solve(t(U10)%*%invC10%*%U10)%*%t(U10)%*%invC10%*%MB10[[i]]
+  mu1_10[i] <- mu10[[i]][1]
+  mu2_10[i] <- mu10[[i]][2]
+}
+
+
+
+### arbre à 50 feuilles
+tree50 <- rtree(n = 50, equiprob = FALSE)
+MB50 <- mvSIM(tree = tree50, nsim = 10000, model = "BM1", param = list(sigma = sigma, theta = mu))
+C50 <- vcv(tree50)
+U50 <- matrix(rep(1,50),ncol = 1)
+invC50 <- solve(C50)
+mu50 <- list()
+mu1_50 <- NULL
+mu2_50 <- NULL
+for(i in 1:10000){
+  mu50[[i]] <- solve(t(U50)%*%invC50%*%U50)%*%t(U50)%*%invC50%*%MB50[[i]]
+  mu1_50[i] <- mu50[[i]][1]
+  mu2_50[i] <- mu50[[i]][2]
+}
+
+
+### arbre à 100 feuilles
+tree100 <- rtree(n = 100, equiprob = FALSE)
+MB100 <- mvSIM(tree = tree100, nsim = 10000, model = "BM1", param = list(sigma = sigma, theta = mu))
+C100 <- vcv(tree100)
+U100 <- matrix(rep(1,100),ncol = 1)
+invC100 <- solve(C100)
+mu100 <- list()
+mu1_100 <- NULL
+mu2_100 <- NULL
+for(i in 1:10000){
+  mu100[[i]] <- solve(t(U100)%*%invC100%*%U100)%*%t(U100)%*%invC100%*%MB100[[i]]
+  mu1_100[i] <- mu100[[i]][1]
+  mu2_100[i] <- mu100[[i]][2]
+}
+
+
+### arbre à 150 feuilles
+tree150 <- rtree(n = 150, equiprob = FALSE)
+MB150 <- mvSIM(tree = tree150, nsim = 10000, model = "BM1", param = list(sigma = sigma, theta = mu))
+C150 <- vcv(tree150)
+U150 <- matrix(rep(1,150),ncol = 1)
+invC150 <- solve(C150)
+mu150 <- list()
+mu1_150 <- NULL
+mu2_150 <- NULL
+for(i in 1:10000){
+  mu150[[i]] <- solve(t(U150)%*%invC150%*%U150)%*%t(U150)%*%invC150%*%MB150[[i]]
+  mu1_150[i] <- mu150[[i]][1]
+  mu2_150[i] <- mu150[[i]][2]
+}
+
+
+### arbre à 200 feuilles
+tree200 <- rtree(n = 200, equiprob = FALSE)
+MB200 <- mvSIM(tree = tree200, nsim = 10000, model = "BM1", param = list(sigma = sigma, theta = mu))
+C200 <- vcv(tree200)
+U200 <- matrix(rep(1,200),ncol = 1)
+invC200 <- solve(C200)
+mu200 <- list()
+mu1_200 <- NULL
+mu2_200 <- NULL
+for(i in 1:10000){
+  mu200[[i]] <- solve(t(U200)%*%invC200%*%U200)%*%t(U200)%*%invC200%*%MB200[[i]]
+  mu1_200[i] <- mu200[[i]][1]
+  mu2_200[i] <- mu200[[i]][2]
+}
+
+
+### arbre à 500 feuilles
+# tree500 <- rtree(n = 500, equiprob = FALSE)
+# MB500 <- mvSIM(tree = tree500, nsim = 1000, model = "BM1", param = list(sigma = sigma, theta = mu))
+# C500 <- vcv(tree500)
+# U500 <- matrix(rep(1,500),ncol = 1)
+# invC500 <- solve(C500)
+# mu500 <- list()
+# mu1_500 <- NULL
+# mu2_500 <- NULL
+# for(i in 1:1000){
+#   mu500[[i]] <- solve(t(U500)%*%invC500%*%U500)%*%t(U500)%*%invC500%*%MB500[[i]]
+#   mu1_500[i] <- mu500[[i]][1]
+#   mu2_500[i] <- mu500[[i]][2]
+# }
+
+
+### arbre à 1000 feuilles
+# tree1000 <- rtree(n=1000, equiprob = FALSE)
+# MB1000 <- mvSIM(tree = tree1000, nsim = 1000, model = "BM1", param = list(sigma = sigma, theta = mu))
+# C1000 <- vcv(tree1000)
+# U1000 <- matrix(rep(1,1000),ncol = 1)
+# invC1000 <- solve(C1000)
+# mu1000 <- list()
+# mu1_1000 <- NULL
+# mu2_1000 <- NULL
+# for(i in 1:1000){
+#   mu1000[[i]] <- solve(t(U1000)%*%invC1000%*%U1000)%*%t(U1000)%*%invC1000%*%MB1000[[i]]
+#   mu1_1000[i] <- mu1000[[i]][1]
+#   mu2_1000[i] <- mu1000[[i]][2]
+# }
+
+
+# data_mu1 <- data.frame(cbind(mu1_10,mu1_50,mu1_100,mu1_500,mu1_1000))
+data_mu1 <- data.frame(cbind(mu1_10,mu1_50,mu1_100,mu1_150,mu1_200))
+boxplot(data_mu1)
+
+data_mu2 <- data.frame(cbind(mu2_10,mu2_50,mu2_100,mu2_500,mu2_1000))
+boxplot(data_mu2)
+
+## La variance diminue tout le temps sauf pour l'arbre à 1000 feuilles
+
+#################################################
+#################################################
 ## estimation moyenne sur un arbre de 500 feuille
 
 tree_sim <- rtree(n=500,equiprob = FALSE)
