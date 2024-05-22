@@ -1,114 +1,118 @@
 ################################################################################
 # Modèle brownien avec dérive b
-# Y ~ MN(Un*mu^t+T*b^t, C, R) 
-# Y = X*theta+E où X =[Un|t], theta^t = [mu|b] et E ~ MN(0,C,R)
+# Y ~ MN(Un*mu^t+T*b^t, Cn, R) 
+# Y = X*theta+E où X =[Un|T], theta^t = [mu|b] et E ~ MN(0,Cn,R)
+################################################################################
+
+n <- 104
+m <- 102
+
+################################################################################
+# Estimations
 ################################################################################
 
 # Construction de C, basée sur les feuilles (temps d'évolution commune)
+Cn <- vcv(tree)
 
-C <- vcv(tree)
-
-# Matrice T des temps des feuilles
-
-T <- matrix(nrow=104, ncol=1)
-for (i in 1:104) {
+# Matrice T des temps d'évolution des feuilles
+T <- matrix(nrow=n, ncol=1)
+for (i in 1:n) {
   T[i] <- C[i,i]
 }
 
 # Estimateurs de theta (ie mu et b) et R
-
-invC <- solve(C)
-Un <- matrix(rep(1,104),ncol=1)
+Un <- matrix(rep(1,n),ncol=1)
 X <- cbind(Un,T)
 Y <- as.matrix(dat[,2:3])
 
-theta <- solve(t(X)%*%invC%*%X)%*%t(X)%*%invC%*%Y
-R_d <- 1/102*t(Y)%*%invC%*%(Y-X%*%theta)
+theta_hat_d <- solve(t(X)%*%solve(Cn)%*%X)%*%t(X)%*%solve(Cn)%*%Y
+R_hat_d <- 1/(n-2)*t(Y)%*%solve(Cn)%*%(Y-X%*%theta_hat_d)
 
-
-# ################################################################################
-# # Estimateur des valeurs des ancêtres avec E[Z|Y]=mZ + SigmaZY*SigmaY^(-1)*(Y-mY)
-# 
-# # Construction de Cnoeud, basée sur tous les noeuds
-# 
-# f <- function(x) {
-#   if (x<105) return(x)
-#   else return(x+1)
-# }
-# 
-# Cnoeud <- matrix(nrow=206, ncol=206) # On enlève la racine 105
-# for (i in 1:206) {
-#   Cnoeud[i,i] <- node.depth.edgelength(tree)[f(i)]
-# }
-# for (i in 1:205) {
-#   for (j in ((i+1):206)) {
-#     ancetre <- getMRCA(tree,c(f(i),f(j)))
-#     tij <- node.depth.edgelength(tree)[ancetre]
-#     Cnoeud[i,j] <- tij
-#     Cnoeud[j,i] <- tij
-#   }
-# }
-# 
-# # Matrice Tm des temps des noeuds internes
-# 
-# Tm <- matrix(nrow=102, ncol=1)
-# for (i in 1:102) {
-#   Tm[i] <- Cnoeud[i+104,i+104]
-# }
-# 
-# # Matrice de variance-covariance de (X,Y)
-# RC_d <- kronecker(R_d,Cnoeud, FUN = "*")
-# 
-# # Mettre sous forme vec
-# Um <- matrix(rep(1,102),ncol=1)
-# vecY <- matrix(Y, ncol=1, byrow = F)
-# mY_d <- matrix(Un%*%theta[1,]+T%*%theta[2,], ncol=1, byrow =F)
-# mX_d <- matrix(Um%*%theta[1,]+Tm%*%theta[2,], ncol=1, byrow=F)
-# 
-# # Extraction des matrices SigmaXY et SigmaY
-# SigmaXY_d <- rbind(cbind(RC_d[105:206,1:104],RC_d[105:206,207:310]),cbind(RC_d[311:412,1:104],RC_d[311:412,207:310]))
-# SigmaY_d <- rbind(cbind(RC_d[1:104,1:104],RC_d[1:104,207:310]),cbind(RC_d[207:310,1:104],RC_d[207:310,207:310]))
-# 
-# # Estimateur
-# Estimateur_d <- mX_d + SigmaXY_d%*%solve(SigmaY_d)%*%(vecY-mY_d)
-
-################################################################################
-# Estimateur des valeurs des ancêtres avec E[Z|Y]=mZ + I2@(CmnCn^(-1))*(Y-mY)
-
-# Construction de Cmn entre nœuds internes et feuilles
-
-Cmn <- matrix(nrow=102, ncol=104) 
-for (i in 1:102) {
-  for (j in (1:104)) {
-    ancetre <- getMRCA(tree,c(i+105,j))
+# Construction de Cmn, entre nœuds internes et feuilles
+Cmn <- matrix(nrow=m, ncol=n) 
+for (i in 1:m) {
+  for (j in (1:n)) {
+    ancetre <- getMRCA(tree,c(i+n+1,j))
     tij <- node.depth.edgelength(tree)[ancetre]
     Cmn[i,j] <- tij
   }
 }
 
-# Matrice Tm des temps des noeuds internes
-
-Tm <- matrix(nrow=102, ncol=1)
-for (i in 1:102) {
-  Tm[i] <- Cnoeud[i+104,i+104]
+# Matrice Tm des temps d'évolution des nœuds internes
+Tm <- matrix(nrow=m, ncol=1)
+for (i in 1:m) {
+  Tm[i] <- Cnoeud[i+n,i+n]
 }
 
-# Mettre sous forme vec
-vecY <- matrix(Y, ncol=1, byrow = F)
-mY_d <- matrix(X%*%theta, ncol=1, byrow =F)
-Um <- matrix(rep(1,102),ncol=1)
-mZ_d <- matrix(cbind(Um,Tm)%*%theta, ncol=1, byrow=F)
+# Matrice Xm des prédicteurs pour les nœuds internes
+Um <- matrix(rep(1,m),ncol=1)
+Xm <- cbind(Um,Tm)
 
-
-# Estimateur
-Estimateur_d <- mZ_d + kronecker(diag(2),(Cmn%*%solve(C)), FUN = "*")%*%(vecY-mY_d)
-
+# Estimateur des positions des nœuds internes
+Z_hat_d <- Xm%*%theta_hat_d + Cmn%*%solve(Cn)%*%(Y-X%*%theta_hat_d)
 
 
 ################################################################################
-# Calcul de l'AIC ?
-L_hat_d <- -104*log(2*pi)-104/2*log(det(R_d))-log(det(C)) -1/2* sum(diag(solve(R_d)%*%t(Y-X%*%theta)%*%solve(C)%*%(Y-X%*%theta)))
-AIC_d <- -2*L_hat_d + 2*8
-BIC_d <- -2*L_hat_d + log(104)*8
+# Représentation Evolaps
+# This is to export the data to a format that can be read by EvoLaps
+# It exports the data as an "extended newick"
+################################################################################
+
+library(ellipse)
+library(treeio)
+
+# First create a table with tips and node reference numbers
+rec_table <- list(node = seq_len(n_tips + n_nodes))
+
+# Positions des nœuds estimées
+rec_table[["location1"]] <- c(dat$lat, theta_hat_d[1,1], Z_hat_d[,1])
+rec_table[["location2"]] <- c(dat$long, theta_hat_d[1,2], Z_hat_d[,2])
+
+# Ellipses de confiance
+# theta_hat = AY
+A_d <- solve(t(X)%*%solve(Cn)%*%X)%*%t(X)%*%solve(Cn)
+# Z_hat = QY
+Q_d <- Xm%*%A_d + Cmn%*%solve(Cn)%*%(diag(n)-X%*%A_d)
+
+# Ellipse de confiance d'un nœud interne (j=1 latitude, j=2 longitude)
+level <- 0.80
+ell_d <- function(i,j) {
+  if (i==105) {
+    res = ellipse(kronecker(R_hat_d,(A_d%*%Cn%*%t(A_d))[1,1]), center = theta_hat_d[1,], level = level)
+  }
+  else {
+    res = ellipse(kronecker(R_hat_d,(Q_d%*%Cn%*%t(Q_d))[i,i]), center = Z_hat_d[i,], level = level)
+  }
+  return(res[,j])
+}
+
+# Ajout des ellipses de confiance dans rec_table
+trait_name_lat <- paste0("location1_", level * 100, "%HPD")
+trait_name_long <- paste0("location2_", level * 100, "%HPD")
+rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n), lapply(c(105,(1:m)), function(i) ell_d(i,1)))
+rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n), lapply(c(105,(1:m)), function(i) ell_d(i,2)))
+
+# Format the data to export it
+rec_table <- as_tibble(rec_table)
+tree_tibble <- as_tibble(tree)
+tree_data <- full_join(tree_tibble, rec_table, by = 'node')
+tree_data <- as.treedata(tree_data)
+# Write the extended newick. The resulting file can be read by Evolaps.
+write.beast(tree_data, file = here("results", "tree_MB_d_ellipses.tree"), tree.name = "TREE_MB_d_ellipses")
+
+
+################################################################################
+# AIC, BIC et test de rapport de vraisemblance
+################################################################################
+
+l_hat_d <- -n*log(2*pi)-n/2*log(det(R_hat_d))-log(det(Cn))-1/2*sum(diag(solve(R_hat_d)%*%t(Y-X%*%theta_hat_d)%*%solve(Cn)%*%(Y-X%*%theta_hat_d)))
+AIC_d <- -2*l_hat_d + 2*7
+BIC_d <- -2*l_hat_d + log(104)*7
 AIC_d
 BIC_d
+
+# Test de rapport de vraisemblance : (H_0) dérive nulle
+lambda <- -2*(l_hat-l_hat_d)
+lambda
+lambda < qchisq(0.95, 2) 
+lambda < qchisq(0.975, 2)

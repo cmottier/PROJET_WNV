@@ -1,105 +1,98 @@
 ################################################################################
 # Modèle brownien simple
-# Y ~ MN(Un*mut, C, R)
-# Y = Un*mut+E où E ~ MN(0,C,R)
+# Y ~ MN(Un*mut, Cn, R)
+# Y = Un*mut+E où E ~ MN(0,Cn,R)
 ################################################################################
 
-# Construction de C, basée sur les feuilles (temps d'évolution commune)
+n <- 104
+m <- 102
 
-C <- vcv(tree)
+################################################################################
+# Estimations
+################################################################################
 
-# C <- matrix(nrow=104, ncol=104)
-# for (i in 1:104) {
-#   C[i,i] <- node.depth.edgelength(tree)[i]
-# }
-# for (i in 1:103) {
-#   for (j in ((i+1):104)) {
-#     ancetre <- getMRCA(tree,c(i,j))
-#     tij <- node.depth.edgelength(tree)[ancetre]
-#     C[i,j] <- tij
-#     C[j,i] <- tij
-#   }
-# }
+# Construction de Cn, basée sur les feuilles (temps d'évolution commune)
+Cn <- vcv(tree)
 
 # Estimateurs de mu et R
-
-invC <- solve(C)
-Un <- matrix(rep(1,104),ncol=1)
+Un <- matrix(rep(1,n),ncol=1)
 Y <- as.matrix(dat[,2:3])
 
-mut <- solve(t(Un)%*%invC%*%Un)%*%t(Un)%*%invC%*%Y
-R <- 1/103*t(Y-Un%*%mut)%*%invC%*%(Y-Un%*%mut)
+mut_hat <- solve(t(Un)%*%solve(Cn)%*%Un)%*%t(Un)%*%solve(Cn)%*%Y
+R_hat <- 1/(n-1)*t(Y-Un%*%mut_hat)%*%solve(Cn)%*%(Y-Un%*%mut_hat)
 
+# Construction de Cmn, entre nœuds internes et feuilles
 
-# ################################################################################
-# # Estimateur des valeurs des ancêtres avec E[Z|Y]=mZ + SigmaZY*SigmaY^(-1)*(Y-mY)
-# 
-# # Construction de Cnoeud, basée sur tous les noeuds
-# 
-# f <- function(x) {
-#   if (x<105) return(x)
-#   else return(x+1)
-# }
-# 
-# Cnoeud <- matrix(nrow=206, ncol=206) # On enlève la racine 105
-# for (i in 1:206) {
-#   Cnoeud[i,i] <- node.depth.edgelength(tree)[f(i)]
-# }
-# for (i in 1:205) {
-#   for (j in ((i+1):206)) {
-#     ancetre <- getMRCA(tree,c(f(i),f(j)))
-#     tij <- node.depth.edgelength(tree)[ancetre]
-#     Cnoeud[i,j] <- tij
-#     Cnoeud[j,i] <- tij
-#   }
-# }
-# 
-# # Matrice de variance-covariance de (Z,Y)
-# RC <- kronecker(R,Cnoeud, FUN = "*")
-# 
-# # Mettre sous forme vec
-# vecY <- matrix(Y, ncol=1, byrow = F)
-# mY <- matrix(Un%*%mut, ncol=1, byrow =F)
-# Um <- matrix(rep(1,102),ncol=1)
-# mZ <- matrix(Um%*%mut, ncol=1, byrow=F)
-# 
-# # Extraction des matrices SigmaXY et SigmaY
-# SigmaZY <- rbind(cbind(RC[105:206,1:104],RC[105:206,207:310]),cbind(RC[311:412,1:104],RC[311:412,207:310]))
-# SigmaY <- rbind(cbind(RC[1:104,1:104],RC[1:104,207:310]),cbind(RC[207:310,1:104],RC[207:310,207:310]))
-# 
-# # Estimateur
-# Estimateur <- mZ + SigmaZY%*%solve(SigmaY)%*%(vecY-mY)
-
-
-################################################################################
-# Estimateur des valeurs des ancêtres avec E[Z|Y]=mZ + I2@(CmnCn^(-1))*(Y-mY)
-
-# Construction de Cmn entre nœuds internes et feuilles
-
-Cmn <- matrix(nrow=102, ncol=104) 
-for (i in 1:102) {
-  for (j in (1:104)) {
-    ancetre <- getMRCA(tree,c(i+105,j))
+Cmn <- matrix(nrow=m, ncol=n) 
+for (i in 1:m) {
+  for (j in (1:n)) {
+    ancetre <- getMRCA(tree,c(i+n+1,j))
     tij <- node.depth.edgelength(tree)[ancetre]
     Cmn[i,j] <- tij
   }
 }
 
-# Mettre sous forme vec
-vecY <- matrix(Y, ncol=1, byrow = F)
-mY <- matrix(Un%*%mut, ncol=1, byrow =F)
-Um <- matrix(rep(1,102),ncol=1)
-mZ <- matrix(Um%*%mut, ncol=1, byrow=F)
+# Estimateur des positions aux nœuds internes
+Um <- matrix(rep(1,m),ncol=1)
+Z_hat <- Um%*%mut_hat + Cmn%*%solve(Cn)%*%(Y-Un%*%mut_hat)
 
-# Estimateur
-Estimateur <- mZ + kronecker(diag(2),(Cmn%*%solve(C)), FUN = "*")%*%(vecY-mY)
 
 ################################################################################
-# Calcul de l'AIC ?
+# Représentation Evolaps
+# This is to export the data to a format that can be read by EvoLaps
+# It exports the data as an "extended newick"
+################################################################################
 
-L_hat <- -104*log(2*pi)-104/2*log(det(R))-log(det(C)) -1/2* sum(diag(solve(R)%*%t(Y-Un%*%mut)%*%solve(C)%*%(Y-Un%*%mut)))
-AIC <- -2*L_hat + 2*6
-BIC <- -2*L_hat + log(104)*6
+library(ellipse)
+library(treeio)
+
+# First create a table with tips and node reference numbers
+rec_table <- list(node = seq_len(n_tips + n_nodes))
+
+# Positions des nœuds estimées
+rec_table[["location1"]] <- c(dat$lat, mut_hat[1], Z_hat[,1])
+rec_table[["location2"]] <- c(dat$long, mut_hat[2], Z_hat[,2])
+
+# Ellipses de confiance
+# mut_hat = AY
+A <- solve(t(Un)%*%solve(Cn)%*%Un)%*%t(Un)%*%solve(Cn)
+# Z_hat = QY
+Q <- Um%*%A + Cmn%*%solve(Cn)%*%(diag(n)-Un%*%A)
+
+# Ellipse de confiance d'un nœud interne (j=1 latitude, j=2 longitude)
+level <- 0.80
+ell <- function(i,j) {
+  if (i==105) {
+    res = ellipse(kronecker(R_hat,A%*%Cn%*%t(A)), center = mut_hat, level = level)
+  }
+  else {
+    res = ellipse(kronecker(R_hat,(Q%*%Cn%*%t(Q))[i,i]), center = Z_hat[i,], level = level)
+  }
+  return(res[,j])
+}
+
+# Ajout des ellipses de confiance dans rec_table
+trait_name_lat <- paste0("location1_", level * 100, "%HPD")
+trait_name_long <- paste0("location2_", level * 100, "%HPD")
+rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n), lapply(c(105,(1:m)), function(i) ell(i,1)))
+rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n), lapply(c(105,(1:m)), function(i) ell(i,2)))
+
+# Format the data to export it
+rec_table <- as_tibble(rec_table)
+tree_tibble <- as_tibble(tree)
+tree_data <- full_join(tree_tibble, rec_table, by = 'node')
+tree_data <- as.treedata(tree_data)
+# Write the extended newick. The resulting file can be read by Evolaps.
+write.beast(tree_data, file = here("results", "tree_MB_ellipses.tree"), tree.name = "TREE_MB_ellipses")
+
+
+################################################################################
+# AIC et BIC
+################################################################################
+
+l_hat <- -n*log(2*pi)-n/2*log(det(R_hat))-log(det(Cn))-1/2*sum(diag(solve(R_hat)%*%t(Y-Un%*%mut_hat)%*%solve(Cn)%*%(Y-Un%*%mut_hat)))
+AIC <- -2*l_hat + 2*5
+BIC <- -2*l_hat + log(104)*5
 AIC
 BIC
 
