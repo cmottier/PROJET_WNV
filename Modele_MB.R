@@ -67,7 +67,7 @@ for (i in 1:m) {
 # Ellipse de confiance d'un nœud (j=1 latitude, j=2 longitude)
 level <- 0.80
 ell <- function(i,j) {
-  VarZiY <- kronecker(R_hat,(Cm-Cmn%*%solve(Cn)%*%t(Cmn))[i,i])
+  VarZiY <- kronecker(R_hat,(Cm-Cmn%*%solve(Cn)%*%t(Cmn))[i,i]) # Variance conditionnelle
   return(ellipse(VarZiY, center = Z_hat[i,], level = level)[,j])
 }
 
@@ -76,24 +76,6 @@ trait_name_lat <- paste0("location1_", level * 100, "%HPD")
 trait_name_long <- paste0("location2_", level * 100, "%HPD")
 rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n), lapply(1:m, function(i) ell(i,1)))
 rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n), lapply(1:m, function(i) ell(i,2)))
-
-# # mut_hat = AY
-# A <- solve(t(Un)%*%solve(Cn)%*%Un)%*%t(Un)%*%solve(Cn)
-# # Z_hat = QY
-# Q <- Um%*%A + Cmn%*%solve(Cn)%*%(diag(n)-Un%*%A)
-
-# # Ellipse de confiance d'un nœud interne (j=1 latitude, j=2 longitude)
-# level <- 0.80
-# ell <- function(i,j) {
-#   res = ellipse(kronecker(R_hat,(Q%*%Cn%*%t(Q))[i,i]), center = Z_hat[i,], level = level)
-#   return(res[,j])
-# }
-# 
-# # Ajout des ellipses de confiance dans rec_table
-# trait_name_lat <- paste0("location1_", level * 100, "%HPD")
-# trait_name_long <- paste0("location2_", level * 100, "%HPD")
-# rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n), lapply(1:m, function(i) ell(i,1)))
-# rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n), lapply(1:m, function(i) ell(i,2)))
 
 # Format the data to export it
 rec_table <- as_tibble(rec_table)

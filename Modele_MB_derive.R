@@ -70,16 +70,21 @@ rec_table[["location1"]] <- c(dat$lat, Z_hat_d[,1])
 rec_table[["location2"]] <- c(dat$long, Z_hat_d[,2])
 
 # Ellipses de confiance
-# theta_hat = AY
-A_d <- solve(t(X)%*%solve(Cn)%*%X)%*%t(X)%*%solve(Cn)
-# Z_hat = QY
-Q_d <- Xm%*%A_d + Cmn%*%solve(Cn)%*%(diag(n)-X%*%A_d)
+# Construction de Cm, pour les nœuds
+Cm <- matrix(nrow=m, ncol=m) 
+for (i in 1:m) {
+  for (j in (1:m)) {
+    ancetre <- Ancetres[i+n,j+n]
+    tij <- node.depth.edgelength(tree)[ancetre]
+    Cm[i,j] <- tij
+  }
+}
 
-# Ellipse de confiance d'un nœud interne (j=1 latitude, j=2 longitude)
+# Ellipse de confiance d'un nœud (j=1 latitude, j=2 longitude)
 level <- 0.80
 ell_d <- function(i,j) {
-  res = ellipse(kronecker(R_hat_d,(Q_d%*%Cn%*%t(Q_d))[i,i]), center = Z_hat_d[i,], level = level)
-  return(res[,j])
+  VarZiY <- kronecker(R_hat_d,(Cm-Cmn%*%solve(Cn)%*%t(Cmn))[i,i]) # variance conditionnelle
+  return(ellipse(VarZiY, center = Z_hat_d[i,], level = level)[,j])
 }
 
 # Ajout des ellipses de confiance dans rec_table
