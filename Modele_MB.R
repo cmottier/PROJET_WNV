@@ -5,7 +5,7 @@
 ################################################################################
 
 n <- 104
-m <- 102
+m <- 103
 
 ################################################################################
 # Estimations
@@ -23,12 +23,21 @@ R_hat <- 1/(n-1)*t(Y-Un%*%mut_hat)%*%solve(Cn)%*%(Y-Un%*%mut_hat)
 
 # Construction de Cmn, entre nœuds internes et feuilles
 
+MRCAfull <- mrca(tree, full = TRUE)
 Cmn <- matrix(nrow=m, ncol=n) 
 for (i in 1:m) {
   for (j in (1:n)) {
-    ancetre <- getMRCA(tree,c(i+n+1,j))
+    ancetre <- MRCAfull[i+n, j]
     tij <- node.depth.edgelength(tree)[ancetre]
     Cmn[i,j] <- tij
+  }
+}
+Cm <- matrix(nrow=m, ncol=m) 
+for (i in 1:m) {
+  for (j in 1:m) {
+    ancetre <- MRCAfull[i+n, j+n]
+    tij <- node.depth.edgelength(tree)[ancetre]
+    Cm[i,j] <- tij
   }
 }
 
@@ -50,32 +59,35 @@ library(treeio)
 rec_table <- list(node = seq_len(n_tips + n_nodes))
 
 # Positions des nœuds estimées
-rec_table[["location1"]] <- c(dat$lat, mut_hat[1], Z_hat[,1])
-rec_table[["location2"]] <- c(dat$long, mut_hat[2], Z_hat[,2])
+rec_table[["location1"]] <- c(dat$lat, Z_hat[,1])
+rec_table[["location2"]] <- c(dat$long, Z_hat[,2])
 
 # Ellipses de confiance
-# mut_hat = AY
-A <- solve(t(Un)%*%solve(Cn)%*%Un)%*%t(Un)%*%solve(Cn)
-# Z_hat = QY
-Q <- Um%*%A + Cmn%*%solve(Cn)%*%(diag(n)-Un%*%A)
+# # mut_hat = AY
+# A <- solve(t(Un)%*%solve(Cn)%*%Un)%*%t(Un)%*%solve(Cn)
+# # Z_hat = QY
+# Q <- Um%*%A + Cmn%*%solve(Cn)%*%(diag(n)-Un%*%A)
+# var Z | Y
+VZY <- Cm - Cmn%*%solve(Cn)%*%t(Cmn)
 
 # Ellipse de confiance d'un nœud interne (j=1 latitude, j=2 longitude)
 level <- 0.80
 ell <- function(i,j) {
-  if (i==105) {
-    res = ellipse(kronecker(R_hat,A%*%Cn%*%t(A)), center = mut_hat, level = level)
-  }
-  else {
-    res = ellipse(kronecker(R_hat,(Q%*%Cn%*%t(Q))[i,i]), center = Z_hat[i,], level = level)
-  }
+  # if (i==105) {
+  #   res = ellipse(kronecker(R_hat,A%*%Cn%*%t(A)), center = mut_hat, level = level)
+  # }
+  # else {
+  #   res = ellipse(kronecker(R_hat,(Q%*%Cn%*%t(Q))[i,i]), center = Z_hat[i,], level = level)
+  # }
+  res = ellipse(kronecker(R_hat,VZY[i,i]), center = Z_hat[i,], level = level)
   return(res[,j])
 }
 
 # Ajout des ellipses de confiance dans rec_table
 trait_name_lat <- paste0("location1_", level * 100, "%HPD")
 trait_name_long <- paste0("location2_", level * 100, "%HPD")
-rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n), lapply(c(105,(1:m)), function(i) ell(i,1)))
-rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n), lapply(c(105,(1:m)), function(i) ell(i,2)))
+rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n), lapply(1:m, function(i) ell(i,1)))
+rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n), lapply(1:m, function(i) ell(i,2)))
 
 # Format the data to export it
 rec_table <- as_tibble(rec_table)
