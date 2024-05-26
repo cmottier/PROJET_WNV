@@ -11,6 +11,7 @@ Ce projet a été réalisé dans le cadre du master 1 SSD de l'université de Mo
   - wnv_tree.R : import des données et tracé de l'arbre phylogénétique
   - Modele_MB.R : estimation dans le modèle de brownien simple
   - Modele_MB_derive.R : estimation dans le modèle de brownien avec dérive
+  - Brownien.R : pour simuler une trajectoire suivant approximativement un brownien en deux dimensions
 
 ## Auteurs
 
