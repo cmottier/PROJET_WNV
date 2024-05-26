@@ -70,8 +70,17 @@ MB_ancestral <- mut
 
 # Estimateur des noeuds intermédiaires
 X <- Estimateur
-rec_table[["location1"]] <- c(dat$lat, MB_ancestral[1], Estimateur[1:102])
-rec_table[["location2"]] <- c(dat$long, MB_ancestral[2], Estimateur[103:204])
+VAR <- matrix(R,nrow = 2)
+level <- 0.90
+CI <- ellipse::ellipse(VAR,center = MB_ancestral, level = 0.90)
+# store the x and y values as lists
+trait_name_lat <- paste0("location1_", level * 100, "%HPD")
+trait_name_long <- paste0("location2_", level * 100, "%HPD")
+rec_table[[paste0(trait_name_lat, "_", 1)]] <- c(rep(NA, n_tips), lapply(1:n_nodes, function(i) CI[, 1]))
+rec_table[[paste0(trait_name_long, "_", 1)]] <- c(rep(NA, n_tips), lapply(1:n_nodes, function(i) CI[, 2]))
+
+# rec_table[["location1"]] <- c(dat$lat, MB_ancestral[1], Estimateur[1:102])
+# rec_table[["location2"]] <- c(dat$long, MB_ancestral[2], Estimateur[103:204])
 
 # Format the data to export it
 rec_table <- as_tibble(rec_table)
@@ -79,7 +88,9 @@ tree_tibble <- as_tibble(tree)
 tree_data <- full_join(tree_tibble, rec_table, by = 'node')
 tree_data <- as.treedata(tree_data)
 # Write the extended newick. The resulting file can be read by Evolaps.
-write.beast(tree_data, file = here("results", "tree_MB.tree"), tree.name = "TREE_MB")
+#write.beast(tree_data, file = here("results", "tree_MB.tree"), tree.name = "TREE_MB")
+write.beast(tree_data, file = here("results", "tree_MB_CI.tree"), tree.name = "TREE_MB_CI")
+
 
 ################################################################################
 # Estimateur MB avec dérive
