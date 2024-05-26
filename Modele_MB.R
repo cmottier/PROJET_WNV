@@ -3,6 +3,7 @@
 # Y ~ MN(Un*mut, Cn, R)
 # Y = Un*mut+E où E ~ MN(0,Cn,R)
 ################################################################################
+#### L'import des données est faite dans le script wnv_tree.R
 
 n <- 104
 m <- 103
@@ -38,7 +39,7 @@ Z_hat <- Um%*%mut_hat + Cmn%*%solve(Cn)%*%(Y-Un%*%mut_hat)
 
 
 ################################################################################
-# Représentation Evolaps
+# Evolaps
 # This is to export the data to a format that can be read by EvoLaps
 # It exports the data as an "extended newick"
 ################################################################################

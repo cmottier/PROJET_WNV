@@ -3,6 +3,7 @@
 # Y ~ MN(Un*mu^t+T*b^t, Cn, R) 
 # Y = X*theta+E où X =[Un|T], theta^t = [mu|b] et E ~ MN(0,Cn,R)
 ################################################################################
+#### L'import des données est faite dans le script wnv_tree.R
 
 n <- 104
 m <- 103
@@ -54,7 +55,7 @@ Z_hat_d <- Xm%*%theta_hat_d + Cmn%*%solve(Cn)%*%(Y-X%*%theta_hat_d)
 
 
 ################################################################################
-# Représentation Evolaps
+# Evolaps
 # This is to export the data to a format that can be read by EvoLaps
 # It exports the data as an "extended newick"
 ################################################################################
