@@ -1,0 +1,160 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage[margin=1.5cm, bottom=1.5cm]{geometry}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{calc}
+\usepackage{bbold}
+
+
+
+\usepackage{pstricks-add}
+\usepackage{pstricks}
+\usepackage{tikz,pgf,tkz-tab}
+
+\newcommand{\vs}[1]{\vspace{#1cm}}
+\newcommand{\hs}[1]{\hspace{#1cm}}
+
+
+\newcommand{\ben}{\begin{enumerate}}
+\newcommand{\een}{\end{enumerate}}
+\newcommand{\bit}{\begin{itemize}}
+\newcommand{\eit}{\end{itemize}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+                
+\usepackage{alltt}
+
+\setlength{\parindent}{0pt}
+% \setlength{\columnseprule}{0.25pt}
+
+\begin{document}
+\begin{center}
+
+\Large Modèle brownien
+
+\end{center}
+
+\
+
+\section{Le modèle brownien multivarié}
+
+\underline{Définition} : 
+Soit $(X_t)_{t\in\R_+}$ un processus aléatoire indexé par $\R_+$, à valeurs dans $\R^p$ ($p\in\N^*$).\\ On dit que $(X_t)$ est un processus à accroissements indépendants et stationnaires si, pour tous $s,t\in\R_+$, le vecteur aléatoire $X_{t+s}-X_t$ est indépendant de $X_t$ et a même loi que $X_s$.  
+
+\
+
+\underline{Définition} : 
+Le mouvement brownien multivarié $(B_t)_{t\in\R_+}$ est l'unique processus aléatoire à accroissements indépendants et stationnaires, presque-sûrement à trajectoires continues, et tel que pour tout temps $t$ fixé, $B_t$ suit la loi $\mathcal N(0_p, tI_p)$.  
+
+\
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=6cm]{PROJET/Brownien.eps}
+\caption{Simulation d'un mouvement brownien en deux dimensions}
+\end{figure}
+
+
+
+\underline{Remarques} :
+\bit
+\item Par définition, si $(B_t)$ est le mouvement brownien dans $\R^p$, $(B_t)=(B_t^{(1)},\ldots,B_t^{(p)})$ où les $(B_t^{(i)})$ sont $p$ mouvements browniens univariés indépendants.
+\item Nous renvoyons à {\red Méléard} pour la preuve de l'existence du mouvement brownien (dans le cas univarié).
+\eit
+
+\section{Inférence dans le cas du modèle brownien}
+
+\section{Estimation des paramètres}
+
+Nous avons vu précédemment que :
+$$Y\sim \mathcal{MN}_{n\times 2}(\mathbb 1_n\mu^T,C_n,R)$$
+où $\mu\in\R^{2\times 1}$ est la position géographique de l'ancêtre commun et $R\in\R^{2\times 2}$ la matrice de covariance par lignes. 
+
+
+
+Soit $L_n$ une matrice de Cholesky de $C_n$ (donc $C_n=L_nL_n^T$)et notons $Y^*=L^{-1}Y$ et $X^*=L_n^{-1}\mathbb 1_n$. Nous avons alors :
+$$Y^*\sim \mathcal{MN}_{n\times 2}(X^*\mu^T, I_n,R)$$
+c'est-à-dire : 
+$$Y^*=X^*\mu^T+E,\text{ avec } E\sim \mathcal{MN}_{n\times 2}(0, I_n,R).$$
+Nous sommes ici dans le cadre de la régression linéaire multivariée vue dans {\red la section...}. Remarquons que maximiser la vraisemblance de $Y^*$ revient à maximiser la ressemblance de $Y$ ({\red cf section...}). Nous allons donc pouvoir utiliser les estimateurs du maximum de vraisemblance afin d'estimer les deux paramètres $\mu$ et $R$ :
+
+$$\begin{array}{ll}
+\widehat{\mu}^T&=((X^*)^TX^*)^{-1}(X^*)^TY^*\\
+&= (\mathbb 1_n^T(L_n^{-1})^TL_n^{-1}\mathbb 1_n)^{-1}\mathbb 1_n^T(L_n^{-1})^TL_n^{-1}Y\\
+&= (\mathbb 1_n^TC_n^{-1}\mathbb 1_n)^{-1}\mathbb 1_n^TC_n^{-1}Y
+\end{array}$$
+
+$$\begin{array}{ll}
+\widehat{R}&=\frac 1{n-1}(Y^*-X^*\widehat\mu^T)^T(Y^*-X^*\widehat\mu^T)\\
+&= \frac 1{n-1}(L_n^{-1}Y-L_n^{-1}\mathbb1_n\widehat\mu^T)^T(L_n^{-1}Y-L_n^{-1}\mathbb1_n\widehat\mu^T)\\
+&= \frac 1{n-1}(Y-\mathbb1_n\widehat\mu^T)^TC_n^{-1}(Y-\mathbb1_n\widehat\mu^T)
+\end{array}$$
+
+Nous obtenons alors, à partir des données du virus du Nil, les estimations suivantes : 
+$$\widehat\mu^T=\begin{pmatrix}
+         41.2405 & -75.3132
+        \end{pmatrix}
+\text{ et }
+\widehat R=\begin{pmatrix}
+            7.8906 & 3.3800\\
+            3.3800 & 28.4436
+           \end{pmatrix}$$
+
+\underline{Remarques} : 
+\bit
+\item Tout le code R utilisé dans ce projet est présenté en annexe. 
+\item La valeur de $\widehat \mu^T$ nous donne la position géographique estimée du cas 0 de l'épidémie. 
+\eit
+
+\section{Inférence des positions géographiques ancestrales}
+
+Les paramètres $\mu$ et $R$ étant estimés, nous souhaitons maintenant inférer les positions géographiques des nœuds internes de l'arbre phylogénétique. Nous allons pour cela utiliser l'espérance conditionnelle.
+
+Comme nous l'avons vu {\red dans la section...}, en notant $Z$ les positions géographiques des nœuds internes, nous avons :
+$$\begin{pmatrix}
+   Y\\Z
+  \end{pmatrix}
+\sim \mathcal{MN}(\mathbb 1_N\mu^T,C_N, R)
+\hs{.5}\text{ ie }\hs{.5} \text{vec}\begin{pmatrix}
+                       Y\\Z
+                      \end{pmatrix}
+\sim \mathcal N(\text{vec}(\mathbb 1_N\mu^T), R\otimes C_N)$$
+où $N$ désigne le nombre total de nœuds ($n$ feuilles et $m$ nœuds internes en excluant la racine) et $C_N$ la matrice des temps partagés de ces différents nœuds. Ainsi, l'espérance conditionnelle de $\text{vec}(Z)$ par rapport à $\text{vec}(Y)$ est donnée par :
+$$\begin{array}{ll}
+\mathbb E\left[\text{vec}(Z)|\text{vec}(Y)\right]
+&=\mathbb E\left[\text{vec}(Z)\right]+\mathbb Cov\left(\text{vec}(Z),\text{vec}(Y)\right)\mathbb V(\text{vec}(Y))^{-1}\left[\text{vec}(Y)-\mathbb E\left[\text{vec}(Y)\right]\right]\\
+&=\text{vec}(\mathbb 1_m\mu^T)+(R\otimes C_{mn})(R\otimes C_n)^{-1}\left[\text{vec}(Y)-\text{vec}(\mathbb 1_n\mu^T)\right]
+\end{array}$$
+où $C_{mn}$ désigne la matrice des temps partagés entre les nœuds internes (en ligne) et les feuilles (en colonne).
+Les propriétés du produit de Kronecker permettent alors de simplifier :
+$$\begin{array}{ll}
+   (R\otimes C_{mn})(R\otimes C_n)^{-1}
+   &= (R\otimes C_{mn})(R^{-1}\otimes C_n^{-1})\\
+   &= (RR^{-1})\otimes (C_{mn}C_n^{-1})\\
+   &= I_2\otimes (C_{mn}C_n^{-1})
+  \end{array}$$
+
+Pour inférer les positions géographiques des nœuds internes, nous allons donc utiliser l'estimateur suivant :
+$$\text{vec}(\widehat Z)=\text{vec}(\mathbb 1_m\widehat\mu^T)+(I_2\otimes C_{mn}C_n^{-1})\left[\text{vec}(Y)-\text{vec}(\mathbb 1_n\widehat\mu^T)\right]$$
+Remarquons que, de manière surprenante, cet estimateur ne dépend pas de $R$. 
+
+Nous utilisons le logiciel Evolaps afin de visualiser les estimations obtenues. La figure \ref{MB} présente le résultat obtenu.  
+
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=12cm]{Image_MB.png}
+\caption{Dynamique du virus du Nil, estimée sous le modèle brownien (en rouge les plus anciens, en bleu les plus récents)}
+\label{MB}
+\end{figure}
+
+
+
+
+
+\end{document}
