@@ -12,6 +12,7 @@ Ce projet a été réalisé dans le cadre du master 1 SSD de l'université de Mo
   - Modele_MB.R : estimation dans le modèle de brownien simple
   - Modele_MB_derive.R : estimation dans le modèle de brownien avec dérive
   - Brownien.R : pour simuler une trajectoire suivant approximativement un brownien en deux dimensions
+  - stat.R : fichier contenant les simulations et calculs sur l'erreur des estimateurs
 
 ## Auteurs
 
